@@ -6,11 +6,27 @@ Calculate the shape of a matrix
 
 def matrix_shape(matrix):
     """
-    Requiere a matrix as input
-    Returns the shape as a list of integers
+    Matrix shape function
     """
-    if type(matrix[0]) is not list:
-        return [len(matrix)]
-    else:
-        return [len(matrix)] + matrix_shape(matrix[0])
-    
+
+    size = []
+    if isinstance(matrix, list):
+        size.append(len(matrix))
+
+        e = matrix[0]
+        if isinstance(e, list):
+            matrix_shape_rec(e, size)
+    return size
+
+
+def matrix_shape_rec(matrix, size):
+    """
+    Matrix shape recursive function
+    """
+    if isinstance(matrix, list):
+        size.append(len(matrix))
+
+        e = matrix[0]
+        if isinstance(e, list):
+            matrix_shape_rec(e, size)
+    return size
