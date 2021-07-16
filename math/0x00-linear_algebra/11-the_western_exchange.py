@@ -5,9 +5,8 @@ Module used to get the transpose of a matrix
 
 
 def np_transpose(matrix):
-    """Matrix add function
     """
-    import numpy as np
-
-    return np.transpose(np.array(matrix))
-  
+    Needs a matrix as input
+    Returns a trasposed matrix
+    """
+    return matrix.transpose()
