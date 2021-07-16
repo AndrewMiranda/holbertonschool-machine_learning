@@ -1,32 +1,19 @@
 #!/usr/bin/env python3
 """
-Module used to use matrix mult
+Module that multiplies two matrices
 """
-import numpy as np
 
 
 def np_slice(matrix, axes={}):
     """
-    function that slices a matrix along a specific axes:
-    Arguments:
-    - matrix    : numpy.ndarray
-    - axes      : dictionary
-                  Dictionary where the key is an axis to slice along and the
-                  value is a tuple representing the slice to make along that
-                  axis
-                  You can assume that axes represents a valid slice
-    Return      : The sliced matrix
-    Hint        : https://docs.python.org/3/library/functions.html#slice
+    Needs a matrix as input
+    Returns the resulting matrix
     """
-
     sliced = []
-    num_keys = max(axes)
-    n = num_keys + 1
-
-    for i in range(n):
-        if (i in axes.keys()):
+    max_key = max(axes)
+    for i in range(max_key + 1):
+        if i in axes.keys():
             sliced.append(slice(*axes.get(i)))
         else:
             sliced.append(slice(None, None, None))
-
     return matrix[tuple(sliced)]
