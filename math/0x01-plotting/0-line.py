@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 y = np.arange(0, 11) ** 3
 
-plt.plot(y, 'r-')
-plt.xlim(0, 10)
+# your code here
+x = np.arange(0, 11)
+fig = plt.figure(figsize=(8, 8))
+plt.plot(x, y, color='red')  # Plot the chart
 plt.show()
