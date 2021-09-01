@@ -12,6 +12,7 @@ def l2_reg_gradient_descent(Y, weights, cache, alpha, lambtha, L):
     uses tanh activations on each layer except the last, which
     uses a softmax activation, the weights and biases of the
     network are updated in place).
+    
     Args.
         Y: A one-hot numpy.ndarray of shape (classes, m) that contains the
         correct labels for the data.
