@@ -51,4 +51,3 @@ def pca(X, var=0.95):
     Vr = V[..., :r + 1]
 
     return Vr
-    
