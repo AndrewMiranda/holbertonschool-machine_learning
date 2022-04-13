@@ -11,7 +11,7 @@ import numpy as np
 
 def forward(Observation, Emission, Transition, Initial):
     """
-    Returns: P, F, or None, None on failure
+    Returns: P, F, or None, None on failures
     """
     T = Observation.shape[0]
 
