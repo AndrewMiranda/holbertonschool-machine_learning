@@ -1,137 +1,138 @@
 #!/usr/bin/env python3
 """
-Performs the Baum-Welch algorithm for a hidden markov model
-https://www.adeveloperdiary.com/data-science/machine-learning/
-derivation-and-implementation-of-baum-welch-algorithm-for-hidden-markov-model/
+ Baum-Welch
+ read:
+1) http://www.adeveloperdiary.com/data-science/machine-learning/->
+->implement-viterbi-algorithm-in-hidden-markov-model-using-python-and-r/
 """
-
 
 import numpy as np
 
 
 def forward(Observation, Emission, Transition, Initial):
     """
-    Returns: P, F, or None, None on failures
+    forward hidden Markov model
     """
+    N, M = Emission.shape
     T = Observation.shape[0]
+    alpha = np.zeros((N, T))
+    aux = (Initial.T * Emission[:, Observation[0]])
+    alpha[:, 0] = aux.reshape(-1)
+    for t in range(1, T):
+        prev = alpha[:, t - 1]
+        trans = Transition
+        em = Emission[:, Observation[t]]
+        first = np.matmul(prev, trans)
+        alpha[:, t] = first * em
 
-    N, _ = Emission.shape
-
-    F = np.zeros((N, T))
-
-    # Initialization step
-    F[:, 0] = Initial.transpose() * Emission[:, Observation[0]]
-
-    # Recursion
-    for i in range(1, T):
-        F[:, i] = \
-            np.matmul(F[:, i - 1], Transition) * Emission[:, Observation[i]]
-
-    # Likelihood of the observations given the model
-    P = np.sum(F[:, T - 1])
-
-    return P, F
+    return (alpha)
 
 
 def backward(Observation, Emission, Transition, Initial):
     """
-    Returns: P, B, or None, None on failure
+    backward hidden Markov model
     """
+    N, M = Emission.shape
     T = Observation.shape[0]
 
-    N, _ = Emission.shape
+    # we should initialize the last prob as 1
+    beta = np.zeros((N, T))
+    beta[:, T - 1] = 1
 
-    B = np.zeros((N, T))
-
-    # Initialization step
-    B[:, T - 1] = np.ones(N)
-
-    # Recursion
+    # this should be start in T-2 and should stop in 0
+    # that is why the range has this form and step
     for t in range(T - 2, -1, -1):
-        prob = \
-            np.sum(B[:, t + 1] *
-                   Emission[:, Observation[t + 1]] * Transition, axis=1)
-        B[:, t] = prob
+        trans = Transition
+        em = Emission[:, Observation[t + 1]]
+        post = beta[:, t + 1]
+        first = post * em
+        beta[:, t] = np.dot(trans, first)
 
-    # Likelihood of the observations given the model
-    P = np.sum(Initial[:, 0] * Emission[:, Observation[0]] * B[:, 0])
-
-    return P, B
+    return (beta)
 
 
 def baum_welch(Observations, Transition, Emission, Initial, iterations=1000):
     """
+    * Observations is a numpy.ndarray of shape (T,) that contains the index of
+      the observation
+      - T is the number of observations
+    * Transition is a numpy.ndarray of shape (M, M) that contains the
+      initialized
+      transition probabilities
+      - M is the number of hidden states
+    * Emission is a numpy.ndarray of shape (M, N) that contains the initialized
+      emission probabilities
+      - N is the number of output states
+    * Initial is a numpy.ndarray of shape (M, 1) that contains the initialized
+      starting probabilities
+    * iterations is the number of times expectation-maximization should be
+      performed
     Returns: the converged Transition, Emission, or None, None on failure
     """
+    # ****************** observation conditionals ************************
     if type(Observations) is not np.ndarray or len(Observations.shape) != 1:
         return None, None
-
-    if type(Transition) is not np.ndarray or len(Transition.shape) != 2:
-        return None, None
-
+    for elem in Observations:
+        if elem < 0:
+            return None, None
+    # ******************* emission conditionals *******************
     if type(Emission) is not np.ndarray or len(Emission.shape) != 2:
         return None, None
 
+    # ******************* transition conditionals *******************
+    if type(Transition) is not np.ndarray or len(Transition.shape) != 2:
+        return None, None
+    if Transition.shape[0] != Transition.shape[1]:
+        return None, None
+
+    # ******************* initial conditionals *******************
     if type(Initial) is not np.ndarray or len(Initial.shape) != 2:
         return None, None
 
-    T = Observations.shape[0]
+    # ******************* iterations **************************
+    if type(iterations) is not int or iterations <= 0:
+        return None, None
+    # ******************* shape conditionals *******************
+    if Initial.shape[0] != Transition.shape[0]:
+        return None, None
+
+    if Emission.shape[0] != Transition.shape[0]:
+        return None, None
+
     N, M = Emission.shape
+    T = Observations.shape[0]
 
-    if Transition.shape[0] != N or Transition.shape[1] != N:
-        return None, None
+    Obs = Observations.copy()
+    Init = Initial.copy()
+    Emi = Emission.copy()
+    Trans = Transition.copy()
 
-    if Initial.shape[0] != N or Initial.shape[1] != 1:
-        return None, None
+    for n in range(iterations):
 
-    if not np.sum(Transition, axis=1).all():
-        return None, None
-
-    if not np.sum(Emission, axis=1).all():
-        return None, None
-
-    if not np.sum(Initial) == 1:
-        return None, None
-
-    for _ in range(iterations):
-        _, alpha = forward(Observations, Emission, Transition, Initial)
-        _, beta = backward(Observations, Emission, Transition, Initial)
+        alpha = forward(Obs, Emi, Trans, Init)
+        beta = backward(Obs, Emi, Trans, Init)
 
         xi = np.zeros((N, N, T - 1))
         for t in range(T - 1):
-            a = np.matmul(alpha[:, t].transpose(), Transition)
-            b = Emission[:, Observations[t + 1]].transpose()
-            c = beta[:, t + 1]
-            denominator = np.matmul(a * b, c)
+            first = np.dot(alpha[:, t].T, Trans)
+            second = Emi[:, Obs[t + 1]].T
+            denominator = np.dot(first * second, beta[:, t + 1])
 
             for i in range(N):
-                a = alpha[i, t]
-                b = Transition[i]
-                c = Emission[:, Observations[t + 1]].transpose()
-                d = beta[:, t + 1].transpose()
-                numerator = a * b * c * d
+                first = alpha[i, t] * Trans[i]
+                second = Emi[:, Obs[t + 1]].T
+                numerator = first * second * beta[:, t + 1].T
                 xi[i, :, t] = numerator / denominator
 
         gamma = np.sum(xi, axis=1)
+        Trans = np.sum(xi, 2) / np.sum(gamma, axis=1).reshape((-1, 1))
 
-        # TRANSITION CALCULATION
-        num = np.sum(xi, 2)
-        den = np.sum(gamma, axis=1).reshape((-1, 1))
-        Transition = num / den
-
-        # EMISSION CALCULATION
         # Add additional T'th element in gamma
-        xi_sum = np.sum(xi[:, :, T - 2], axis=0)
-        xi_sum = xi_sum.reshape((-1, 1))
-        gamma = np.hstack((gamma, xi_sum))
-
+        gamma = np.hstack((gamma, np.sum(xi[:, :, T - 2],
+                                         axis=0).reshape((-1, 1))))
         denominator = np.sum(gamma, axis=1)
-        denominator = denominator.reshape((-1, 1))
+        for l in range(M):
+            Emi[:, l] = np.sum(gamma[:, Obs == l], axis=1)
+        Emi = np.divide(Emi, denominator.reshape((-1, 1)))
 
-        for i in range(M):
-            gamma_i = gamma[:, Observations == i]
-            Emission[:, i] = np.sum(gamma_i, axis=1)
-
-        Emission = Emission / denominator
-
-    return Transition, Emission
+    return (Trans, Emi)
