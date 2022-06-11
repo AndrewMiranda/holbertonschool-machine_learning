@@ -1,93 +1,70 @@
 #!/usr/bin/env python3
-"""2. Cumulative N-gram BLEU score"""
-
-
+"""Natural Language Processing - Evaluation Metrics"""
 import numpy as np
 
 
-def helper(references, sentence, n):
-    """Cumulative helper function"""
-    if n == 1:
-        return references, sentence
-    n_sent = []
-    slen = len(sentence)
+def n_gram(sentence, n):
+    """Tokenize sentence into grams"""
+    if n <= 1:
+        return sentence
+    step = n - 1
 
-    for i, word in enumerate(sentence):
-        count = 0
-        w = word
-
-        for j in range(1, n):
-            if slen > i + j:
-                w += " " + sentence[i + j]
-                count += 1
-
-        if count == j:
-            n_sent.append(w)
-
-    n_ref = []
-
-    for ref in references:
-        tmp = []
-        rlen = len(ref)
-
-        for i, word in enumerate(ref):
-            count = 0
-            w = word
-
-            for j in range(1, n):
-                if rlen > i + j:
-                    w += " " + ref[i + j]
-                    count += 1
-            if count == j:
-                tmp.append(w)
-        n_ref.append(tmp)
-
-    return n_ref, n_sent
+    result = sentence[:-step]
+    for i in range(len(result)):
+        for j in range(step):
+            result[i] += ' ' + sentence[i + 1 + j]
+    return result
 
 
-def calc_prec(references, sentence, n):
-    """Calculates precision of bleu"""
-    n_ref, n_sent = helper(references, sentence, n)
-    ngs_len = len(n_sent)
-    slen = len(sentence)
-    sdict = {word: n_sent.count(word) for word in n_sent}
-    rdict = {}
+def ngram_bleu(references, sentence, n):
+    """Calucluates the n-gram BLEU score
+    Arguments:
+        references {list} -- Containg a list of string sentence reference
+        sentence {list} -- Contain the model candidate
+        n {int} -- The number of prefered grams
+    Returns:
+        float -- The n-gram BLEU score
+    """
+    c = len(sentence)
+    rs = [len(r) for r in references]
 
-    for ref in n_ref:
-        for gram in ref:
-            if rdict.get(gram) is None or rdict[gram] < ref.count(gram):
-                rdict[gram] = ref.count(gram)
+    sentence = n_gram(sentence, n)
+    references = list(map(lambda ref: n_gram(ref, n), references))
 
-    matches = {word: 0 for word in n_sent}
+    flat = set([gram for ref in references for gram in ref])
 
-    for ref in n_ref:
-        for gram in matches.keys():
-            if gram in ref:
-                matches[gram] = sdict[gram]
-    for gram in matches.keys():
-        if rdict.get(gram) is not None:
-            matches[gram] = min(rdict[gram], matches[gram])
-    prec = sum(matches.values()) / ngs_len
+    top = 0
+    for gram in flat:
+        if gram in sentence:
+            top += 1
+    prec = top / len(sentence)
 
-    return prec
+    best_match = None
+    for i, ref in enumerate(references):
+        if best_match is None:
+            best_match = ref
+            r_idx = i
+        best_diff = abs(len(best_match) - len(sentence))
+        if abs(len(ref) - len(sentence)) < best_diff:
+            best_match = ref
+            r_idx = i
+
+    return prec, rs[r_idx]
 
 
 def cumulative_bleu(references, sentence, n):
-    """calculates the cumulative n-gram BLEU score"""
-    slen = len(sentence)
-    prec = [0] * n
+    """Calculates the cumulative bleu score"""
+    c = len(sentence)
+    prec = np.zeros(n)
 
     for i in range(n):
-        prec[i] = calc_prec(references, sentence, i + 1)
+        prec[i], r = ngram_bleu(references, sentence, i + 1)
 
-    avg = np.exp(np.sum((1 / n) * np.log(prec)))
-    idx = np.argmin([abs(len(word) - slen) for word in references])
-    rlen = len(references[idx])
-
-    if slen > rlen:
-        bleau = 1
+    if c > r:
+        brevity_penality = 1
     else:
-        bleu = np.exp(1 - float(rlen) / slen)
-    score = bleu * avg
+        brevity_penality = np.exp(1 - r / c)
 
-    return score
+    weights = np.ones(n) * 1 / n
+    bleu_score = brevity_penality * np.exp(np.sum(np.log(prec) * weights))
+    return bleu_score
