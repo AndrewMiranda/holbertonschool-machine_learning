@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""File that write a script that prints the location of a
-specific user"""
-import sys
+""" Test file"""
 import requests
 import time
-
+import sys
 
 if __name__ == '__main__':
+    r = requests.get(sys.argv[1])
+    data = r.json()
 
-    url = sys.argv[1]
-    headers = {'Accept': 'application/vnd.github.v3+json'}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        print(response.json()['location'])
-    if response.status_code == 404:
-        print('Not found')
-    if response.status_code == 403:
-        limit = int(response.headers['X-Ratelimit-Reset'])
-        start = int(time.time())
-        elapsed = int((limit - start) / 60)
-        print('Reset in {} min'.format(int(elapsed)))
+    if r.status_code == 403:
+        limit = r.headers["X-Ratelimit-Reset"]
+        x = (int(limit) - int(time.time())) / 60
+        print("Reset in {} min".format(int(x)))
+
+    elif r.status_code == 200:
+        print(data["location"])
+
+    else:
+        print("Not found")
