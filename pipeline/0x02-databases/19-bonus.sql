@@ -1,19 +1,16 @@
--- Calculates a new correction for a student
-DELIMITER $$
-DROP PROCEDURE IF EXISTS AddBonus;
-CREATE PROCEDURE AddBonus(
-    IN user_id INT,
+-- script that creates a stored procedure AddBonus
+-- that adds a new correction for a student
+-- resource: https://www.mysqltutorial.org/stored-procedures-parameters.aspx
+delimiter $$
+CREATE PROCEDURE AddBonus (
+    IN user_id INTEGER,
     IN project_name VARCHAR(255),
-    IN newscore INT)
+    IN score INTEGER)
 BEGIN
-    IF NOT EXISTS(
-        SELECT *
-            FROM projects
-                WHERE projects.name = project_name) THEN
-                    INSERT INTO projects(name) VALUES(project_name);
+    IF NOT EXISTS (SELECT name FROM projects WHERE name=project_name) THEN
+        INSERT INTO projects(name) VALUES (project_name);
     END IF;
-
-
-END;
-$$
-DELIMITER ;
+    INSERT INTO corrections(user_id, project_id, score)
+        VALUES(user_id,(SELECT id FROM projects WHERE name = project_name), score);
+END $$
+delimiter ;
